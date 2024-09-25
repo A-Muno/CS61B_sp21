@@ -113,24 +113,57 @@ public class Model extends Observable {
         // TODO: Modify this.board (and perhaps this.score) to account
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
+        int size = board.size();
 
-        Set<Tile> changedTiles = new HashSet<>();
-        board.setViewingPerspective(side);
-        for (int row = board.size() - 2; row >= 0; row--) {
-            for (int col = 0; col < board.size(); col++) {
-                Tile tile = board.tile(col, row);
-                if (tile == null) {
-                    continue;
+        if(side != Side.NORTH)
+            board.setViewingPerspective(side);
+
+        // 对于每一列，先找到能向上移动的最大位置（找空格数）
+        for(int col = 0; col < size; col ++) {
+            for (int row = size - 2; row >= 0; row--) {
+                int nulltile = 0;
+                Tile t = board.tile(col, row);
+                if(t != null) {
+                    for(int row_before = row + 1; row_before < size; row_before ++){
+                        if(tile(col, row_before) == null)
+                            nulltile ++;
+                    }
+                    board.move(col, row + nulltile, t);
+                    changed = true;
                 }
-                VTile vTile = new VTile(new Coordinate(col, row), tile);
-                boolean isChangedAfterMove = moveTileUp(vTile, changedTiles);
-                if (isChangedAfterMove) {
+            }
+        }
+        for(int col = 0; col < size; col ++){
+            for(int row = size - 2; row >= 0; row --){
+                Tile t1 = board.tile(col, row);
+                if(t1 != null){
+                    Tile t2 = board.tile(col, row + 1);
+                    if(t2 != null && t1.value() == t2.value()){
+                        board.move(col, row + 1, t1);
+                        changed = true;
+                        score += 2 * t2.value();
+                    }
+                }
+            }
+        }
+        for(int col = 0; col < size; col ++) {
+            for (int row = size - 2; row >= 0; row--) {
+                int nulltile = 0;
+                Tile t = board.tile(col, row);
+                if(t != null) {
+                    for(int row_before = row + 1; row_before < size; row_before ++){
+                        if(tile(col, row_before) == null)
+                            nulltile ++;
+                    }
+                    board.move(col, row + nulltile, t);
                     changed = true;
                 }
             }
         }
 
-        board.setViewingPerspective(Side.NORTH);
+        if(side != Side.NORTH)
+            board.setViewingPerspective(Side.NORTH);
+
         checkGameOver();
         if (changed) {
             setChanged();
@@ -138,45 +171,6 @@ public class Model extends Observable {
         return changed;
     }
 
-
-    private boolean moveTileUp(VTile vTile, Set<Tile> changedTiles) {
-        int targetRow;
-        VTile nearest = findNearestTileAbove(vTile);
-        if (nearest == null) {
-            targetRow = board.size() - 1;
-        } else if (vTile.actualTile.value() == nearest.actualTile.value() && !changedTiles.contains(nearest.actualTile)) {
-            targetRow = nearest.row;
-        } else if (nearest.row == vTile.row + 1) {
-            return false;
-        } else {
-            targetRow = nearest.row - 1;
-        }
-        boolean isMerged = board.move(vTile.col, targetRow, vTile.actualTile);
-        if (isMerged) {
-            score += vTile.actualTile.next().value();
-            changedTiles.add(board.tile(vTile.col, targetRow));
-        }
-        return true;
-    }
-    private VTile findNearestTileAbove(VTile vTile) {
-        for (int row = vTile.row + 1; row < board.size(); row++) {
-            Tile actualTile = board.tile(vTile.col, row);
-            if (actualTile != null) {
-                return new VTile(new Coordinate(vTile.col, row), actualTile);
-            }
-        }
-        return null;
-    }
-    private static class VTile {
-        int col;
-        int row;
-        Tile actualTile;
-        public VTile(Coordinate c, Tile t) {
-            col = c.col;
-            row = c.row;
-            actualTile = t;
-        }
-    }
 
     /** Checks if the game is over and sets the gameOver variable
      *  appropriately.
@@ -239,36 +233,6 @@ public class Model extends Observable {
         else return twoAdjacentTilesEqual(b);
     }
 
-    private static Coordinate[] getAdjacentCoordinates(Tile tile, Board b) {
-        int col = tile.col();
-        int row = tile.row();
-        Coordinate[] coordinates = Coordinate.of(new int[][]{
-                {col, row + 1}, {col + 1, row},
-                {col, row - 1}, {col - 1, row}
-        });
-        return Arrays.stream(coordinates).filter(coordinate -> isValidCoordinate(coordinate, b)).toArray(Coordinate[]::new);
-    }
-    private static boolean isValidCoordinate(Coordinate coordinate, Board b) {
-        int col = coordinate.col;
-        int row = coordinate.row;
-        return col >= 0 && col < b.size() && row >= 0 && row < b.size();
-    }
-    private static class Coordinate {
-        int col;
-        int row;
-        public Coordinate(int c, int r) {
-            col = c;
-            row = r;
-        }
-        public static Coordinate[] of(int[][] values) {
-            Coordinate[] coordinates = new Coordinate[values.length];
-            for (int i = 0; i < values.length; i++) {
-                int[] coordinate = values[i];
-                coordinates[i] = new Coordinate(coordinate[0], coordinate[1]);
-            }
-            return coordinates;
-        }
-    }
     /**  Return true if there exist at least two
      *   adjacent tiles with equal values.
      */
