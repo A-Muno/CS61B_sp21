@@ -46,5 +46,4 @@ public class TimeSLList {
         }
         printTimingTable(Ns, times, opCounts);
     }
-
 }
