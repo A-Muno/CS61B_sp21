@@ -114,7 +114,6 @@ public class Model extends Observable {
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
         int size = board.size();
-
         if(side != Side.NORTH)
             board.setViewingPerspective(side);
 
